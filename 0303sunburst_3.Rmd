@@ -1,0 +1,94 @@
+---
+title: 進站30天內購買機率
+author: 中山大學管理學院 卓雍然
+date: "`r Sys.time()`"
+output: 
+  html_document:
+    highlight: pygments
+    theme: flatly
+    css: style.css
+---
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# 這個區段主要是設定筆記網頁的格式和載入(安裝)一些基本的套件，請大家不要改動
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=4, width=90)
+
+if(!require(pacman)) install.packages("pacman")
+pacman::p_load(dplyr, readr, stringr, sunburstR, Matrix)
+```
+<hr>
+
+```{r}
+load("data/ys.rdata")
+```
+
+```{r}
+S = merge(S, B[B$SQ == 1, c("SS", "CUST_NO", "VISITDATE")], all.x=TRUE)
+is.na(S) %>% colSums
+```
+
+```{r}
+A = list(
+  CC = read_csv("data/TBN_CC_APPLY.csv") %>% data.frame,
+  FX = read_csv("data/TBN_FX_TXN.csv") %>% data.frame,
+  LN = read_csv("data/TBN_LN_APPLY.csv") %>% data.frame,
+  WM = read_csv("data/TBN_WM_TXN.csv") %>% data.frame
+  )
+```
+
+```{r}
+sapply(A, function(df) range(df$TXN_DT)  )
+```
+
+```{r}
+AX = lapply(names(A), function(txn) {
+  cat(txn, ": ")
+  mx = xtabs(~ CUST_NO + TXN_DT, data=A[[txn]])
+  cat(dim(mx), "; ")
+  cx = dimnames(mx)[[1]]
+  dx = as.integer(dimnames(mx)[[2]])
+  mx = sapply(1:sum(dx <= max(dx) - 30), function(i) 
+    rowSums(mx[, dx > dx[i] & dx <= dx[i+30] ] ) )
+  cat(dim(mx), "\n")
+  mx = as(mx, "TsparseMatrix")
+  df = data.frame(
+    CUST_NO = cx[1 + mx@i],
+    DATE = dx[1 + mx@j],
+    X = mx@x, stringsAsFactors=F)
+  names(df)[3] = txn
+  df
+  })
+names(AX) = names(A)
+```
+
+```{r}
+names(S)[6] = "DATE"
+S = merge(S, AX$CC, all.x=T)
+S = merge(S, AX$FX, all.x=T)
+S = merge(S, AX$LN, all.x=T)
+S = merge(S, AX$WM, all.x=T)
+summary(S)
+```
+
+```{r}
+is.na(S) %>% colSums
+```
+
+<span style="font-size:24px">`r "\U1F4A1"`:</span> 
+進站30天內購買機率
+```{r}
+100 * colSums( !is.na(S[,7:10]) ) / nrow(S)
+```
+
+```{r}
+save(A, AX, B, S, file="data/ys2.rdata")
+```
+
+
+
+
+<br><br>
