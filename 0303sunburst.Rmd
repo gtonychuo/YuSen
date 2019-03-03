@@ -1,0 +1,78 @@
+---
+title: SUN BURST DIAGRAM - 互動式網站流量分析圖
+author: 中山大學管理學院 卓雍然
+date: "`r Sys.time()`"
+output: 
+  html_document:
+    highlight: pygments
+    theme: flatly
+    css: style.css
+---
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# 這個區段主要是設定筆記網頁的格式和載入(安裝)一些基本的套件，請大家不要改動
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=4, width=90)
+
+if(!require(pacman)) install.packages("pacman")
+pacman::p_load(dplyr, readr, stringr, sunburstR)
+```
+<hr>
+
+### Make Session `SS` & Sequence `SQ` ID's
+```{r}
+B <- read_csv("data/TBN_CUST_BEHAVIOR.csv") %>% data.frame
+```
+
+```{r}
+B$rid = 1:nrow(B)
+B = B %>% arrange(VISITDATE, CUST_NO)
+B$SS = group_indices(B, VISITDATE, CUST_NO)
+B = group_by(B, SS) %>% mutate(SQ = row_number()) %>% data.frame
+```
+
+```{r}
+subset(B, SS == 7)
+```
+<hr>
+ 
+### Examine the URL's
+```{r}
+pg = table(B$PAGE) %>% sort(decreasing=T) %>% as.data.frame
+rbind(head(pg), tail(pg))
+nrow(pg)                                                             # 782
+grepl("^http(s)?://www.esunbank.com.tw/", pg$Var1) %>% sum           # 782
+gsub("^http(s)?://www.esunbank.com.tw/", "", pg$Var1) %>% n_distinct # 671
+```
+
+Some URL start by `http://`
+```{r}
+str_detect(B$PAGE, "^https://www.esunbank.com.tw/") %>% table
+```
+
+Shorten the URL
+```{r}
+B$HTTPS= str_detect(B$PAGE, "^https://www.esunbank.com.tw/")
+B$PAGE = str_replace(B$PAGE, "^http(s)?://www.esunbank.com.tw/", "")
+```
+<hr>
+
+### Make A Sun-Burst Diagram
+<span style="font-size:24px">`r "\U1F4A1"`:</span> 
+Sun-Burst Diagram 是網站流量資料最好的視覺化工具之一
+```{r}
+pages = B$PAGE %>% 
+  str_replace_all("-", "_") %>% 
+  str_replace_all("/", "-") %>% 
+  table %>% sort(decreasing=T) %>% as.data.frame
+head(pages)
+```
+
+```{r}
+sunburst(subset(pages, Freq > 10))
+```
+
+<br><br><br>
