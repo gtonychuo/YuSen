@@ -1,0 +1,108 @@
+---
+title: 互動式網站流量分析圖 SUN BURST DIAGRAM (2)
+author: 中山大學管理學院 卓雍然
+date: "`r Sys.time()`"
+output: 
+  html_document:
+    highlight: pygments
+    theme: flatly
+    css: style.css
+---
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# 這個區段主要是設定筆記網頁的格式和載入(安裝)一些基本的套件，請大家不要改動
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=4, width=90)
+
+if(!require(pacman)) install.packages("pacman")
+pacman::p_load(dplyr, readr, stringr, sunburstR)
+```
+<hr>
+
+```{r}
+load("data/ys.rdata")
+```
+
+### Four Kinds of Sequence
+```{r eval=TRUE}
+# take about 3 minutes
+t0 = Sys.time()
+S = B %>% 
+  mutate(pid = as.integer(PAGE)) %>% 
+  group_by(SS) %>% 
+  summarise(
+    npage = n(),
+    seq = paste0('P',pid,collapse="-"),
+    case = case_when(
+      npage == 1 ~ "Bounce",
+      sum(pid == first(pid)) == npage ~ "Repeat",
+      npage < 5 ~ "Short",
+      TRUE ~ "Long"
+    )) %>% ungroup() %>% data.frame
+S$case = factor(S$case)
+save(B, S, file = "data/ys.rdata")
+Sys.time() - t0
+```
+
+```{r}
+table(S$case) %>% prop.table %>% sort(dec=T) %>% round(3)
+```
+
+```{r}
+L = lapply(levels(S$case), function(x) {
+  df = table(S$seq[S$case == x]) %>% sort(dec=T) %>% data.frame
+  df$Percent = 100 * df$Freq/sum(df$Freq)
+  df$CumPcg = 100 * cumsum(df$Freq)/sum(df$Freq)
+  df
+  }); names(L) = levels(S$case)
+```
+
+
+### Bounced Sequences (48.2%)
+```{r}
+nrow(L$Bounce)
+head(L$Bounce, 20)
+```
+
+### Repeating Sequences (20.9%)
+```{r}
+nrow(L$Repeat)
+head(L$Repeat, 20)
+```
+
+### Short Sequences (17.8%)
+```{r}
+nrow(L$Short)
+head(L$Short, 20)
+```
+
+```{r}
+L$Short$CumPcg[seq(100,500,100)]
+```
+
+##### Sun Burst on the 300 most freq short sequences (52.9%)
+```{r}
+sunburst(L$Short[1:300,1:2])
+```
+<br>
+
+### Long Sequences (13.1%)
+```{r}
+nrow(L$Long)
+head(L$Long, 20)
+```
+
+```{r}
+L$Long$CumPcg[seq(100,1000,100)]
+```
+
+##### Sun Burst on the 700 most freq long sequences (25.3%)
+```{r}
+sunburst(L$Short[1:700,1:2])
+```
+
+
+<br><br>
