@@ -60,7 +60,7 @@ B$PAGE = str_replace(B$PAGE, "^http(s)?://www.esunbank.com.tw/", "")
 ```
 <hr>
 
-### Make A Sun-Burst Diagram
+### Sun-Burst : URL Hierarchy
 <span style="font-size:24px">`r "\U1F4A1"`:</span> 
 Sun-Burst Diagram 是網站流量資料最好的視覺化工具之一
 ```{r}
@@ -74,5 +74,86 @@ head(pages)
 ```{r}
 sunburst(subset(pages, Freq > 10))
 ```
+<hr>
 
-<br><br><br>
+### Working on Session & Sequence 
+
+```{r}
+B$PAGE = str_replace(B$PAGE, "/$", "")
+n_distinct(B$PAGE)
+```
+
+```{r fig.height=5, fig.w=8}
+p0 = par(cex=0.8, mar=c(5,25,3,2))
+table(B$PAGE) %>% sort(decr=T) %>% head(20) %>% barplot(horiz=T, las=2)
+```
+
+```{r}
+PAGES = table(B$PAGE) %>% sort(decr=T)
+```
+
+```{r}
+sapply(0:10, function(i) sum(PAGES > i))
+# 611 573 557 541 522 508 501 490 482 476
+```
+
+```{r}
+B$PAGE =  factor(B$PAGE, levels=names(PAGES))
+```
+
+```{r}
+S = B %>% 
+  mutate(pid = as.integer(PAGE)) %>% 
+  group_by(SS) %>% 
+  summarise(
+    npage = n(),
+    seq = paste0('P',pid,collapse="-")
+    ) %>% ungroup() %>% data.frame
+```
+
+```{r}
+save(B, S, file = "data/ys.rdata")
+```
+
+
+##### No. pages in the sessions
+```{r}
+table(S$npage) %>% sort %>% tail(10)
+```
+
+```{r}
+sapply(1:10, function(i) mean(S$npage > i)) %>% round(2)
+```
+
+##### The most frequent sequence
+```{r}
+table(S$seq) %>% sort %>% tail(20)
+```
+<hr>
+
+### Bounced Sequences (`npage == 1`) 
+```{r}
+table(subset(S, npage == 1)$seq) %>% sort %>% tail(30)
+```
+
+### Sequences longer than One (`npage > 1`) 
+```{r}
+page2 = table(subset(S, npage > 1)$seq) %>% sort 
+```
+
+```{r}
+sum(page2 > 50)
+```
+
+```{r}
+sapply(seq(100,500,100), function (i) sum(tail(page2, i))/sum(page2) )
+```
+
+##### The 100 most freq sequences (43.1%)
+```{r}
+p100 = data.frame(page2) %>% tail(100)
+sunburst(p100)
+```
+
+
+<br><br>
