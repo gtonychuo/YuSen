@@ -136,7 +136,7 @@ table(S$seq) %>% sort %>% tail(20)
 table(subset(S, npage == 1)$seq) %>% sort %>% tail(30)
 ```
 
-### Sequences longer than One (`npage > 1`) 
+### Page Sequences (`npage > 1`) 
 ```{r}
 page2 = table(subset(S, npage > 1)$seq) %>% sort 
 ```
@@ -146,14 +146,20 @@ sum(page2 > 50)
 ```
 
 ```{r}
-sapply(seq(100,500,100), function (i) sum(tail(page2, i))/sum(page2) )
+sapply(seq(100,1000,100), function (i) sum(tail(page2, i))/sum(page2) )
 ```
 
 ##### The 100 most freq sequences (43.1%)
 ```{r}
-p100 = data.frame(page2) %>% tail(100)
-sunburst(p100)
+data.frame(page2) %>% tail(100) %>% sunburst()
 ```
+<br>
+
+##### The 200 most freq sequences (53.2%)
+```{r}
+data.frame(page2) %>% tail(300) %>% sunburst()
+```
+<br>
 
 
 <br><br>
