@@ -18,7 +18,7 @@ par(cex=0.8)
 options(scipen=20, digits=4, width=90)
 
 if(!require(pacman)) install.packages("pacman")
-pacman::p_load(dplyr, readr, stringr, sunburstR, Matrix)
+pacman::p_load(dplyr, readr, stringr, sunburstR, Matrix, vcd)
 ```
 <hr>
 
@@ -26,12 +26,14 @@ pacman::p_load(dplyr, readr, stringr, sunburstR, Matrix)
 load("data/ys.rdata")
 ```
 
+##### Merge `CUST_NO` & `VISDITDATE` into `S`
 ```{r}
 S = merge(S, B[B$SQ == 1, c("SS", "CUST_NO", "VISITDATE")], all.x=TRUE)
 is.na(S) %>% colSums
 ```
 
-```{r}
+##### Read Transaction Log
+```{r message=FALSE, warning=FALSE}
 A = list(
   CC = read_csv("data/TBN_CC_APPLY.csv") %>% data.frame,
   FX = read_csv("data/TBN_FX_TXN.csv") %>% data.frame,
@@ -40,6 +42,7 @@ A = list(
   )
 ```
 
+### 30 DAYS Transaction As a Column in `S`
 ```{r}
 sapply(A, function(df) range(df$TXN_DT)  )
 ```
@@ -78,15 +81,42 @@ summary(S)
 is.na(S) %>% colSums
 ```
 
-<span style="font-size:24px">`r "\U1F4A1"`:</span> 
-進站30天內購買機率
-```{r}
-100 * colSums( !is.na(S[,7:10]) ) / nrow(S)
-```
-
 ```{r}
 save(A, AX, B, S, file="data/ys2.rdata")
 ```
+
+### 進站30天內購買機率
+
+```{r}
+S[,7:10] = !is.na(S[,7:10])
+colMeans(S[,7:10])
+```
+
+### Regular Mosaic Plot
+```{r}
+mosaic(~ case + CC, data=S, shade=T)
+```
+
+```{r}
+assoc(~ case + FX, data=S, shade=T)
+```
+
+### Composite Mosaic Plot
+```{r}
+mx = sapply(levels(S$case), function(x) colSums(S[S$case == x, 7:10]))
+```
+
+```{r}
+mosaic(mx, shade=T, labeling_args = list(
+  set_varnames = c(A="Transaction", B="Pattern")))
+```
+
+```{r}
+assoc(mx, shade=T, labeling_args = list(
+  set_varnames = c(A="Transaction", B="Pattern")))
+```
+ 
+
 
 
 
